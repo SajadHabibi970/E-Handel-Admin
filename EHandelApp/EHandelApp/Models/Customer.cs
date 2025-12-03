@@ -12,8 +12,9 @@ public class Customer
     public string LastName { get; set; } = null!;
     [Required, MaxLength(100)]
     public string Email { get; set; } = null!;
-    [Required]
-    public string? Address { get; set; } = null!;
+
+    [Required] 
+    public string? Address { get; set; }
 
     public List<Order> Orders { get; set; } = new();
 }
