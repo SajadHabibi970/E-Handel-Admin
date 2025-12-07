@@ -10,8 +10,9 @@ while (true)
     // Menu för user interaction
     Console.WriteLine("\n Commands; 1: List Categories | 2: Add Category | 3: Edit Category | 4: Remove Category | " +
                       "\n5: List Product | 6: Add Product | 7: Edit Product | 8: Remove Product |" +
-                      "\n9: List Customer | 10: Add Customer | 11: Edit Customer | 12: Delete Customer |" +
-                      "\n13");
+                      "\n9: List Customer | 10: Add Customer |" +
+                      "\n11: List Order | 12: Add Order |" +
+                      "\n13: List OrderRow | 14: Add OrderRow |");
     Console.Write("> ");
     
     var line = Console.ReadLine() ??  string.Empty;
@@ -23,7 +24,7 @@ while (true)
     }
 
     // Exit program
-    if (line.Equals("13", StringComparison.OrdinalIgnoreCase))
+    if (line.Equals("15", StringComparison.OrdinalIgnoreCase))
     {
         break;
     }
@@ -86,6 +87,21 @@ while (true)
             break;
         case "9":
             await ListCustomersAsync();
+            break;
+        case "10":
+            await AddCustomerAsync();
+            break;
+        case "11":
+            await ListOrdersAsync();
+            break;
+        case "12":
+            await AddOrderAsync();
+            break;
+        case "13":
+            await ListOrderRowAsync();
+            break;
+        case "14":
+            await AddOrderRowAsync();
             break;
         default:
             Console.WriteLine("Unknown command");
@@ -385,5 +401,222 @@ static async Task ListCustomersAsync()
     foreach (var customer in customers)
     {
         Console.WriteLine($"{customer.CustomerId} | {customer.FirstName} | {customer.LastName} | {customer.Email} | {customer.Address}");
+    }
+}
+
+static async Task AddCustomerAsync()
+{
+    Console.WriteLine("First Name: ");
+    var fName = Console.ReadLine()?.Trim()??string.Empty;
+    if (string.IsNullOrEmpty(fName) || fName.Length > 100)
+    {
+        Console.WriteLine("Invalid first name.");
+        return;
+    }
+    
+    Console.WriteLine("Last Name: ");
+    var lName = Console.ReadLine()?.Trim()??string.Empty;
+    if (string.IsNullOrEmpty(lName) || lName.Length > 100)
+    {
+        Console.WriteLine("Invalid last name.");
+        return;
+    }
+    
+    Console.WriteLine("Email: ");
+    var email = Console.ReadLine()?.Trim()??string.Empty;
+    if (string.IsNullOrEmpty(email) || email.Length > 100 || !email.Contains("@"))
+    {
+        Console.WriteLine("Invalid email.");
+        return;
+    }
+    
+    Console.WriteLine("Address: ");
+    var address = Console.ReadLine()?.Trim()??string.Empty;
+    if (string.IsNullOrEmpty(address))
+    {
+        Console.WriteLine("Address is required.");
+        return;
+    }
+    
+    using var db = new ShopContext();
+    db.Customers.Add(new Customer
+    {
+        FirstName = fName,
+        LastName = lName,
+        Email = email,
+        Address = address
+    });
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Customer added");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine("DB error"+ exception.GetBaseException().Message);
+    }
+}
+
+static async Task ListOrdersAsync()
+{
+    using var db = new ShopContext();
+    var orders = await db.Orders.AsNoTracking()
+        .OrderBy(o => o.OrderId)
+        .Include(order => order.Customer)
+        .ToListAsync();
+    Console.WriteLine("Id | OrderDate | Customer | Status | TotalAmount");
+    foreach (var order in orders)
+    {                                                                              
+        Console.WriteLine($"{order.OrderId} | {order.OrderDate:yyyy-MM-dd} | " +
+                          $"{order.Customer?.FirstName} {order.Customer?.LastName} | " +
+                          $"{order.Status} | {order.TotalAmount}");
+    }
+}
+
+static async Task AddOrderAsync()
+{
+    using var db = new ShopContext();
+    var customers = await db.Customers.AsNoTracking()
+        .OrderBy(c => c.CustomerId)
+        .ToListAsync();
+    if (!customers.Any())
+    {
+        Console.WriteLine("No customer exist. Add a customer first");
+        return;
+    }
+    Console.WriteLine("\nAvailable customers: ");
+    foreach (var customer in customers)
+    {
+        Console.WriteLine($"{customer.CustomerId} | {customer.FirstName} | {customer.LastName} | {customer.Email}");
+    }
+    
+    Console.WriteLine("Enter customer id: ");
+    if (!int.TryParse(Console.ReadLine(), out var customerId)
+        || !customers.Any(c => c.CustomerId == customerId))
+    {
+        Console.WriteLine("Invalid customer id.");
+        return;
+    }
+
+    var order = new Order
+    {
+        CustomerId = customerId,
+        OrderDate = DateTime.Now,
+        Status = "Pending",
+        TotalAmount = 0
+    };
+    db.Orders.Add(order);
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Order added");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine("DB error"+ exception.GetBaseException().Message);
+    }
+}
+
+static async Task ListOrderRowAsync()
+{
+    using var db = new ShopContext();
+    var orderrows = await db.OrderRows.AsNoTracking()
+        .OrderBy(or => or.OrderRowId)
+        .Include(o => o.Order)
+        .Include(p => p.Product)
+        .ToListAsync();
+    Console.WriteLine("Id | OrderId | Product | Quantity | Unit Price");
+    foreach (var row in orderrows)
+    {
+        Console.WriteLine($"{row.OrderRowId} | {row.OrderId} | {row.Product?.ProductName} |" +
+                          $" {row.Quantity} | {row.UnitPrice}");
+    }
+}
+
+static async Task AddOrderRowAsync()
+{
+    using var db = new ShopContext();
+    var orders = await db.Orders.AsNoTracking()
+        .OrderBy(o => o.OrderId)
+        .Include(c => c.Customer)
+        .ToListAsync();
+    if (!orders.Any())
+    {
+        Console.WriteLine("No order exist. Add a order first");
+        return;
+    }
+
+    Console.WriteLine("\nAvailable orders: ");
+    foreach (var order in orders)
+    {
+        Console.WriteLine($"{order.OrderId} | {order.Customer?.FirstName} {order.Customer?.LastName} | {order.OrderDate:yyyy-MM-dd}");
+    }
+
+    Console.WriteLine("Enter order id: ");
+    if (!int.TryParse(Console.ReadLine(), out var orderId)
+        || !orders.Any(o => o.OrderId == orderId))
+    {
+        Console.WriteLine("Invalid order id.");
+        return;
+    }
+
+    var products = await db.Products.AsNoTracking()
+        .OrderBy(p => p.ProductId)
+        .ToListAsync();
+    if (!products.Any())
+    {
+        Console.WriteLine("Product not found");
+        return;
+    }
+
+    Console.WriteLine("\nAvailable products: ");
+    foreach (var product in products)
+    {
+        Console.WriteLine($"{product.ProductId} | {product.ProductName} | {product.ProductPrice}");
+    }
+
+    Console.WriteLine("Enter product id: ");
+
+    if (!int.TryParse(Console.ReadLine(), out var productId)
+        || !products.Any(p => p.ProductId == productId))
+    {
+        Console.WriteLine("Invalid product id.");
+        return;
+    }
+    Console.WriteLine("Enter quantity: ");
+    if (!int.TryParse(Console.ReadLine(), out var quantity)
+        || quantity < 1)
+    {
+        Console.WriteLine("Invalid quantity( Quantity should be greater than zero)");
+        return;
+    }
+    
+    var productEntity = await db.Products.FirstOrDefaultAsync(p => p.ProductId == productId);
+    
+    var orderrow = new OrderRow
+    {
+        OrderId = orderId,
+        ProductId = productId,
+        Quantity = quantity,
+        UnitPrice = productEntity.ProductPrice
+    };
+    var orderToUpdate = await db.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+    if (orderToUpdate != null)
+    {
+        orderToUpdate.TotalAmount += quantity * productEntity.ProductPrice;
+    }
+    
+    db.OrderRows.Add(orderrow);
+
+    try
+    {
+        await db.SaveChangesAsync();
+        Console.WriteLine("Orderrow added");
+    }
+    catch (DbUpdateException exception)
+    {
+        Console.WriteLine("DB error"+ exception.GetBaseException().Message);
     }
 }
