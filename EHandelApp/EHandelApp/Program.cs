@@ -10,10 +10,10 @@ while (true)
 {
     // Menu för user interaction
     Console.WriteLine("\n Commands; 1: List Categories | 2: Add Category | 3: Edit Category | 4: Remove Category | " +
-                      "\n5: List Product | 6: Add Product | 7: Edit Product | 8: Remove Product |" +
-                      "\n9: List Customer | 10: Add Customer |" +
-                      "\n11: List Order | 12: Add Order | 13: OrderDetails|" +
-                      "\n14: List OrderRow | 15: Add OrderRow |");
+                      "\n5: List Product | 6: Add Product | 7: Edit Product | 8: Remove Product | 9: Search Product | " +
+                      "\n10: List Customer | 11: Add Customer |" +
+                      "\n12: List Order | 13: Add Order | 14: OrderDetails|" +
+                      "\n15: List OrderRow | 16: Add OrderRow |");
     Console.Write("> ");
     
     var line = Console.ReadLine() ??  string.Empty;
@@ -25,7 +25,7 @@ while (true)
     }
 
     // Exit program
-    if (line.Equals("15", StringComparison.OrdinalIgnoreCase))
+    if (line.Equals("17", StringComparison.OrdinalIgnoreCase))
     {
         break;
     }
@@ -87,24 +87,27 @@ while (true)
             await DeleteProductAsync(pId);
             break;
         case "9":
-            await ListCustomersAsync();
+            await SearchProductsAsync();
             break;
         case "10":
-            await AddCustomerAsync();
+            await ListCustomersAsync();
             break;
         case "11":
-            await ListOrdersAsync();
+            await AddCustomerAsync();
             break;
         case "12":
-            await AddOrderAsync();
+            await ListOrdersAsync();
             break;
         case "13":
-            await OrderDetailsAsync();
+            await AddOrderAsync();
             break;
         case "14":
-            await ListOrderRowAsync();
+            await OrderDetailsAsync();
             break;
         case "15":
+            await ListOrderRowAsync();
+            break;
+        case "16":
             await AddOrderRowAsync();
             break;
         default:
@@ -395,6 +398,30 @@ static async Task DeleteProductAsync(int pidd)
     }
 }
 
+static async Task SearchProductsAsync()
+{
+    Console.WriteLine("Search for products:");
+    var nameP = Console.ReadLine()?.Trim()?? string.Empty;
+    if (string.IsNullOrEmpty(nameP) || nameP.Length > 100)
+    {
+        Console.WriteLine("Product name is required (max 100 characters)");
+    }
+    
+    using var db = new ShopContext();
+    var products = await db.Products
+        .Where(p => p.ProductName.Contains(nameP))
+        .ToListAsync();
+    if (!products.Any())
+    {
+        Console.WriteLine("Product not found");
+    }
+
+    foreach (var p in products)
+    {
+        Console.WriteLine($"{p.ProductName} | {p.StockQuantity} | {p.ProductPrice}");
+    }
+}
+
 static async Task ListCustomersAsync()
 {
     using var db = new ShopContext();
@@ -540,25 +567,28 @@ static async Task OrderDetailsAsync()
         Console.WriteLine("Invalid order id.");
         return;
     }
-    
+
     var orders = await db.Orders
         .Include(o => o.Customer)
         .Include(o => o.OrderRows)
-        .Where(o => o.OrderId == orderId)
-        .ToListAsync();
-    if (!orders.Any())
+        .ThenInclude(or => or.Product)
+        .FirstOrDefaultAsync(o => o.OrderId == orderId);
+    if (orders == null)
     {
         Console.WriteLine("No order found");
         return;
     }
-
-    Console.WriteLine("Id | OrderDate | Status | Customer | Rows | TotalAmount");
-    foreach (var o in orders)
+    Console.WriteLine($"Order Id: {orders.OrderId}" + 
+                      $"\nDate: {orders.OrderDate:yyyy-MM-dd}" +
+                      $"\nStatus: {orders.Status}" +
+                      $"\nCustomer: {orders.Customer?.FirstName} {orders.Customer?.LastName}" +
+                      $"\nTotal Amount: {orders.TotalAmount} kr");
+    
+    Console.WriteLine("Products: ");
+    Console.WriteLine("Name | Price | Quantity");
+    foreach (var p in orders.OrderRows)
     {
-        Console.WriteLine($"{o.OrderId} | {o.OrderDate:yyyy-MM-dd} | {o.Status} |" +
-                          $" {o.Customer?.FirstName} {o.Customer?.LastName} |" +
-                          $" {o.OrderRows.Count} row |" +
-                          $" {o.TotalAmount} kr");
+        Console.WriteLine($"{p.Product?.ProductName} | {p.Product?.ProductPrice} kr | {p.Quantity} st");
     }
     
 }
@@ -568,7 +598,7 @@ static async Task ListOrderRowAsync()
     using var db = new ShopContext();
     var orderrows = await db.OrderRows.AsNoTracking()
         .OrderBy(or => or.OrderRowId)
-        .Include(o => o.Order)
+        .Include(o => o.Order).ThenInclude(order => order.Customer)
         .Include(p => p.Product)
         .ToListAsync();
     Console.WriteLine("Id | OrderId | Product | Quantity | Unit Price");
