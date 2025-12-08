@@ -43,7 +43,7 @@ public static class DbSeeder
         if (!await db.Customers.AnyAsync())
         {
             db.Customers.AddRange(
-                new Customer { FirstName = "John", LastName = "Doa", Email = "johndoe@hotmail.com", Address = "Stockholm"},
+                new Customer { FirstName = "John", LastName = "Doa", Email = EncryptionHelper.Encrypt("johndoe@hotmail.com"), Address = "Stockholm"},
                 new Customer { FirstName = "Jane", LastName = "Doe", Email = "janedoe@hotmail.com", Address = "Malmö"}
                 );
             await db.SaveChangesAsync();

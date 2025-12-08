@@ -1,4 +1,5 @@
-﻿using EHandelApp.Data;
+﻿using EHandelApp;
+using EHandelApp.Data;
 using EHandelApp.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,8 +12,8 @@ while (true)
     Console.WriteLine("\n Commands; 1: List Categories | 2: Add Category | 3: Edit Category | 4: Remove Category | " +
                       "\n5: List Product | 6: Add Product | 7: Edit Product | 8: Remove Product |" +
                       "\n9: List Customer | 10: Add Customer |" +
-                      "\n11: List Order | 12: Add Order |" +
-                      "\n13: List OrderRow | 14: Add OrderRow |");
+                      "\n11: List Order | 12: Add Order | 13: OrderDetails|" +
+                      "\n14: List OrderRow | 15: Add OrderRow |");
     Console.Write("> ");
     
     var line = Console.ReadLine() ??  string.Empty;
@@ -98,9 +99,12 @@ while (true)
             await AddOrderAsync();
             break;
         case "13":
-            await ListOrderRowAsync();
+            await OrderDetailsAsync();
             break;
         case "14":
+            await ListOrderRowAsync();
+            break;
+        case "15":
             await AddOrderRowAsync();
             break;
         default:
@@ -400,7 +404,11 @@ static async Task ListCustomersAsync()
     Console.WriteLine($"\nId | FirstName | LastName | Email | Address");
     foreach (var customer in customers)
     {
-        Console.WriteLine($"{customer.CustomerId} | {customer.FirstName} | {customer.LastName} | {customer.Email} | {customer.Address}");
+        Console.WriteLine($"" +
+                          $"{customer.CustomerId} | " +
+                          $"{customer.FirstName} | {customer.LastName} | " +
+                          $"{EncryptionHelper.Decrypt(customer.Email)} | {customer.Email} " +
+                          $"{customer.Address}");
     }
 }
 
@@ -443,7 +451,7 @@ static async Task AddCustomerAsync()
     {
         FirstName = fName,
         LastName = lName,
-        Email = email,
+        Email = EncryptionHelper.Encrypt(email),
         Address = address
     });
 
@@ -517,6 +525,42 @@ static async Task AddOrderAsync()
     {
         Console.WriteLine("DB error"+ exception.GetBaseException().Message);
     }
+}
+
+static async Task OrderDetailsAsync()
+{
+    using var db = new ShopContext();
+
+    await ListOrdersAsync();
+    
+    Console.WriteLine("Enter order id to see details: ");
+    if (!int.TryParse(Console.ReadLine(), out var orderId)
+        || !db.Orders.Any(o => o.OrderId == orderId))
+    {
+        Console.WriteLine("Invalid order id.");
+        return;
+    }
+    
+    var orders = await db.Orders
+        .Include(o => o.Customer)
+        .Include(o => o.OrderRows)
+        .Where(o => o.OrderId == orderId)
+        .ToListAsync();
+    if (!orders.Any())
+    {
+        Console.WriteLine("No order found");
+        return;
+    }
+
+    Console.WriteLine("Id | OrderDate | Status | Customer | Rows | TotalAmount");
+    foreach (var o in orders)
+    {
+        Console.WriteLine($"{o.OrderId} | {o.OrderDate:yyyy-MM-dd} | {o.Status} |" +
+                          $" {o.Customer?.FirstName} {o.Customer?.LastName} |" +
+                          $" {o.OrderRows.Count} row |" +
+                          $" {o.TotalAmount} kr");
+    }
+    
 }
 
 static async Task ListOrderRowAsync()
