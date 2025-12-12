@@ -42,9 +42,30 @@ public static class DbSeeder
         // Add customer
         if (!await db.Customers.AnyAsync())
         {
+            var salt1 = HashingHelper.GenerateSalt();
+            var hash1 = HashingHelper.HashWithSalt("Password123", salt1);
+            var salt2 = HashingHelper.GenerateSalt();
+            var hash2 = HashingHelper.HashWithSalt("Password123", salt2);
+            
             db.Customers.AddRange(
-                new Customer { FirstName = "John", LastName = "Doa", Email = EncryptionHelper.Encrypt("johndoe@hotmail.com"), Address = "Stockholm"},
-                new Customer { FirstName = "Jane", LastName = "Doe", Email = "janedoe@hotmail.com", Address = "Malmö"}
+                new Customer 
+                { 
+                    FirstName = "John", 
+                    LastName = "Doa", 
+                    Email = EncryptionHelper.Encrypt("johndoe@hotmail.com"), 
+                    PasswordHash = hash1,
+                    PasswordSalt = salt1,
+                    Address = "Stockholm"
+                },
+                new Customer
+                {
+                    FirstName = "Jane", 
+                    LastName = "Doe", 
+                    Email = EncryptionHelper.Encrypt("janedoe@hotmail.com"), 
+                    PasswordHash = hash2,
+                    PasswordSalt = salt2,
+                    Address = "Malmö"
+                }
                 );
             await db.SaveChangesAsync();
             Console.WriteLine("Cusomers seeded to DB");

@@ -12,6 +12,9 @@ public class Customer
     public string LastName { get; set; } = null!;
     [Required, MaxLength(100)]
     public string Email { get; set; } = null!;
+    [Required]
+    public string PasswordHash { get; set; } = string.Empty;
+    public string PasswordSalt { get; set; } = string.Empty;
 
     [Required] 
     public string? Address { get; set; }

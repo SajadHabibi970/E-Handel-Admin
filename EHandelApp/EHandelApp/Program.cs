@@ -13,7 +13,8 @@ while (true)
                       "\n5: List Product | 6: Add Product | 7: Edit Product | 8: Remove Product | 9: Search Product | " +
                       "\n10: List Customer | 11: Add Customer |" +
                       "\n12: List Order | 13: Add Order | 14: OrderDetails|" +
-                      "\n15: List OrderRow | 16: Add OrderRow |");
+                      "\n15: List OrderRow | 16: Add OrderRow |" +
+                      "\n17 = Exit");
     Console.Write("> ");
     
     var line = Console.ReadLine() ??  string.Empty;
@@ -434,7 +435,7 @@ static async Task ListCustomersAsync()
         Console.WriteLine($"" +
                           $"{customer.CustomerId} | " +
                           $"{customer.FirstName} | {customer.LastName} | " +
-                          $"{EncryptionHelper.Decrypt(customer.Email)} | {customer.Email} " +
+                          $"{EncryptionHelper.Encrypt(customer.Email)} |" +
                           $"{customer.Address}");
     }
 }
@@ -465,6 +466,17 @@ static async Task AddCustomerAsync()
         return;
     }
     
+    Console.WriteLine("Password: ");
+    var password = Console.ReadLine()?.Trim()??string.Empty;
+    if (string.IsNullOrEmpty(password))
+    {
+        Console.WriteLine("Invalid password.");
+        return;
+    }
+
+    var salt = HashingHelper.GenerateSalt();
+    var hash = HashingHelper.HashWithSalt(password, salt);
+    
     Console.WriteLine("Address: ");
     var address = Console.ReadLine()?.Trim()??string.Empty;
     if (string.IsNullOrEmpty(address))
@@ -479,7 +491,9 @@ static async Task AddCustomerAsync()
         FirstName = fName,
         LastName = lName,
         Email = EncryptionHelper.Encrypt(email),
-        Address = address
+        Address = address,
+        PasswordSalt = salt,
+        PasswordHash = hash
     });
 
     try
@@ -542,7 +556,6 @@ static async Task AddOrderAsync()
         TotalAmount = 0
     };
     db.Orders.Add(order);
-
     try
     {
         await db.SaveChangesAsync();
