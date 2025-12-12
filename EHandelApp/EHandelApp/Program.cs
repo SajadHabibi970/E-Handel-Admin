@@ -12,9 +12,9 @@ while (true)
     Console.WriteLine("\n Commands; 1: List Categories | 2: Add Category | 3: Edit Category | 4: Remove Category | " +
                       "\n5: List Product | 6: Add Product | 7: Edit Product | 8: Remove Product | 9: Search Product | " +
                       "\n10: List Customer | 11: Add Customer |" +
-                      "\n12: List Order | 13: Add Order | 14: OrderDetails|" +
-                      "\n15: List OrderRow | 16: Add OrderRow |" +
-                      "\n17 = Exit");
+                      "\n12: List Order | 13: List OrderSummery | 14: Add Order | 15: OrderDetails|" +
+                      "\n16: List OrderRow | 17: Add OrderRow |" +
+                      "\n18 = Exit");
     Console.Write("> ");
     
     var line = Console.ReadLine() ??  string.Empty;
@@ -26,7 +26,7 @@ while (true)
     }
 
     // Exit program
-    if (line.Equals("17", StringComparison.OrdinalIgnoreCase))
+    if (line.Equals("18", StringComparison.OrdinalIgnoreCase))
     {
         break;
     }
@@ -100,15 +100,18 @@ while (true)
             await ListOrdersAsync();
             break;
         case "13":
-            await AddOrderAsync();
+            await ListOrderSummeryViewAsync();
             break;
         case "14":
-            await OrderDetailsAsync();
+            await AddOrderAsync();
             break;
         case "15":
-            await ListOrderRowAsync();
+            await OrderDetailsAsync();
             break;
         case "16":
+            await ListOrderRowAsync();
+            break;
+        case "17":
             await AddOrderRowAsync();
             break;
         default:
@@ -520,6 +523,25 @@ static async Task ListOrdersAsync()
         Console.WriteLine($"{order.OrderId} | {order.OrderDate:yyyy-MM-dd} | " +
                           $"{order.Customer?.FirstName} {order.Customer?.LastName} | " +
                           $"{order.Status} | {order.TotalAmount}");
+    }
+}
+
+static async Task ListOrderSummeryViewAsync()
+{
+    using var db = new ShopContext();
+    var summaries = await db.OrderSummeries
+        .OrderByDescending(o => o.OrderDate)
+        .ToListAsync();
+    Console.WriteLine("OrderId |OrderDate | CustomeName| CusomerEmail | TotalAmount SEK");
+    {
+        foreach (var summary in summaries)
+        {
+            Console.WriteLine($"{summary.OrderId} | " +
+                              $"{summary.OrderDate:yyyy-MM-dd} | " +
+                              $"{summary.CustomerName} | " +
+                              $"{summary.CustomerEmail} | " +
+                              $"{summary.TotalAmount} SEK");
+        }
     }
 }
 

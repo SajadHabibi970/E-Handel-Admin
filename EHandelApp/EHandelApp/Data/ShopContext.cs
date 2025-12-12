@@ -11,6 +11,7 @@ public class ShopContext : DbContext
     public DbSet<OrderRow> OrderRows => Set<OrderRow>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<OrderSummery> OrderSummeries => Set<OrderSummery>();
 
     /// <summary>
     /// Set up SqLite as the database
@@ -26,6 +27,12 @@ public class ShopContext : DbContext
     // Configure table structure, relationships and constraints
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<OrderSummery>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("OrderSummeryView");
+        });
+        
         modelBuilder.Entity<Customer>(c =>
         {
             c.HasKey(x => x.CustomerId);
