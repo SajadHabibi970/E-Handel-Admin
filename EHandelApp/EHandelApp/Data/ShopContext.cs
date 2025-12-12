@@ -35,6 +35,10 @@ public class ShopContext : DbContext
                 .IsRequired().HasMaxLength(100);
             c.Property(x => x.Email)
                 .IsRequired().HasMaxLength(100);
+            c.Property(x => x.PasswordHash)
+                .IsRequired().HasMaxLength(256);
+            c.Property(x => x.PasswordSalt)
+                .IsRequired().HasMaxLength(128);
             c.Property(x => x.Address)
                 .IsRequired();
 
