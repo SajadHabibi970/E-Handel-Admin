@@ -247,7 +247,10 @@ static async Task ListProductsAsync()
         Console.WriteLine($"{row.ProductId} | {row.ProductName} | {row.ProductDescription} | {row.ProductPrice} kr | {row.StockQuantity} st");
     }
 }
-
+/*
+ * Basic input validation is performed in the application layer
+ * before saving data to the database.
+ */
 static async Task AddProductAsync()
 {
     using var db = new ShopContext();
@@ -381,6 +384,9 @@ static async Task EditProductAsync(int pid)
     }
 }
 
+/*
+ * Delete products by their id
+ */
 static async Task DeleteProductAsync(int pidd)
 {
     using var db = new ShopContext();
@@ -402,6 +408,9 @@ static async Task DeleteProductAsync(int pidd)
     }
 }
 
+/*
+ * Search for products by their names
+ */
 static async Task SearchProductsAsync()
 {
     Console.WriteLine("Search for products:");
@@ -426,6 +435,9 @@ static async Task SearchProductsAsync()
     }
 }
 
+/*
+ * Email is decrypted when displayed to the user
+ */
 static async Task ListCustomersAsync()
 {
     using var db = new ShopContext();
@@ -438,11 +450,14 @@ static async Task ListCustomersAsync()
         Console.WriteLine($"" +
                           $"{customer.CustomerId} | " +
                           $"{customer.FirstName} | {customer.LastName} | " +
-                          $"{EncryptionHelper.Encrypt(customer.Email)} |" +
+                          $"{EncryptionHelper.Decrypt(customer.Email)} |" +
                           $"{customer.Address}");
     }
 }
-
+/*
+ * Email is encrypted before storage
+ * Password is hashed with salt using PBKDF2.
+ */
 static async Task AddCustomerAsync()
 {
     Console.WriteLine("First Name: ");
@@ -526,6 +541,10 @@ static async Task ListOrdersAsync()
     }
 }
 
+/*
+ * Reads data from database VIEW
+ * that aggregates order and customer information.
+ */
 static async Task ListOrderSummeryViewAsync()
 {
     using var db = new ShopContext();
@@ -545,6 +564,9 @@ static async Task ListOrderSummeryViewAsync()
     }
 }
 
+/*
+ * Create Order for specific customer
+*/
 static async Task AddOrderAsync()
 {
     using var db = new ShopContext();
@@ -575,7 +597,7 @@ static async Task AddOrderAsync()
         CustomerId = customerId,
         OrderDate = DateTime.Now,
         Status = "Pending",
-        TotalAmount = 0
+        TotalAmount = 0,
     };
     db.Orders.Add(order);
     try
@@ -589,6 +611,9 @@ static async Task AddOrderAsync()
     }
 }
 
+/*
+ * Show the details för orders
+ */
 static async Task OrderDetailsAsync()
 {
     using var db = new ShopContext();
@@ -643,7 +668,9 @@ static async Task ListOrderRowAsync()
                           $" {row.Quantity} | {row.UnitPrice}");
     }
 }
-
+/*
+ * Add orderrow for chosen order
+ */
 static async Task AddOrderRowAsync()
 {
     using var db = new ShopContext();
@@ -703,21 +730,19 @@ static async Task AddOrderRowAsync()
     }
     
     var productEntity = await db.Products.FirstOrDefaultAsync(p => p.ProductId == productId);
-    
-    var orderrow = new OrderRow
+
+    if (productEntity != null)
     {
-        OrderId = orderId,
-        ProductId = productId,
-        Quantity = quantity,
-        UnitPrice = productEntity.ProductPrice
-    };
-    var orderToUpdate = await db.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
-    if (orderToUpdate != null)
-    {
-        orderToUpdate.TotalAmount += quantity * productEntity.ProductPrice;
+        var orderrow = new OrderRow
+        {
+            OrderId = orderId,
+            ProductId = productId,
+            Quantity = quantity,
+            UnitPrice = productEntity.ProductPrice
+        };
+        
+        db.OrderRows.Add(orderrow);
     }
-    
-    db.OrderRows.Add(orderrow);
 
     try
     {
